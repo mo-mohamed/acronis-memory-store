@@ -1,4 +1,4 @@
-# In Memory Store - HTTP REST API
+# Acronis In Memory Store
 ## Requirements 
 
 Need to implement simple in-memory data structure store. See Redis for example.
