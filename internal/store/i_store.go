@@ -3,7 +3,7 @@ package store
 import "context"
 
 // Store defines the interface for in-memory data structure store
-type Store interface {
+type IStore interface {
 	// String operations
 	Set(ctx context.Context, key string, value any, ttlSeconds int) error
 	Get(ctx context.Context, key string) (string, error)
