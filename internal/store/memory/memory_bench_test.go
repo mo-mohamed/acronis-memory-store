@@ -37,7 +37,6 @@ func BenchmarkGet(b *testing.B) {
 	defer store.StopTTLWorker()
 	ctx := context.Background()
 
-	// Pre-populate store
 	for i := 0; i < 1000; i++ {
 		key := fmt.Sprintf("key_%d", i)
 		store.Set(ctx, key, "value", 0)
@@ -50,12 +49,74 @@ func BenchmarkGet(b *testing.B) {
 	}
 }
 
+func BenchmarkUpdate(b *testing.B) {
+	store := memory.NewMemoryStore()
+	defer store.StopTTLWorker()
+	ctx := context.Background()
+
+	for i := 0; i < 1000; i++ {
+		key := fmt.Sprintf("key_%d", i)
+		store.Set(ctx, key, "initial_value", 0)
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := fmt.Sprintf("key_%d", i%1000)
+		store.Update(ctx, key, "updated_value")
+	}
+}
+
+func BenchmarkRemove(b *testing.B) {
+	store := memory.NewMemoryStore()
+	defer store.StopTTLWorker()
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := fmt.Sprintf("key_%d", i)
+		store.Set(ctx, key, "value", 0)
+		store.Remove(ctx, key)
+	}
+}
+
+func BenchmarkPush(b *testing.B) {
+	store := memory.NewMemoryStore()
+	defer store.StopTTLWorker()
+	ctx := context.Background()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := fmt.Sprintf("list_%d", i%100)
+		item := fmt.Sprintf("item_%d", i)
+		store.Push(ctx, key, item)
+	}
+}
+
+func BenchmarkPop(b *testing.B) {
+	store := memory.NewMemoryStore()
+	defer store.StopTTLWorker()
+	ctx := context.Background()
+
+	for i := 0; i < 100; i++ {
+		key := fmt.Sprintf("list_%d", i)
+		for j := 0; j < 1000; j++ {
+			item := fmt.Sprintf("item_%d_%d", i, j)
+			store.Push(ctx, key, item)
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		key := fmt.Sprintf("list_%d", i%100)
+		store.Pop(ctx, key)
+	}
+}
+
 func BenchmarkConcurrentGet(b *testing.B) {
 	store := memory.NewMemoryStore()
 	defer store.StopTTLWorker()
 	ctx := context.Background()
 
-	// Pre-populate store
 	for i := 0; i < 1000; i++ {
 		key := fmt.Sprintf("key_%d", i)
 		store.Set(ctx, key, "value", 0)
@@ -77,6 +138,7 @@ func BenchmarkConcurrentSet(b *testing.B) {
 	defer store.StopTTLWorker()
 	ctx := context.Background()
 
+	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		i := 0
 		for pb.Next() {
@@ -87,26 +149,43 @@ func BenchmarkConcurrentSet(b *testing.B) {
 	})
 }
 
-func BenchmarkScalability(b *testing.B) {
-	sizes := []int{100, 1000, 10000, 100000}
+func BenchmarkConcurrentPush(b *testing.B) {
+	store := memory.NewMemoryStore()
+	defer store.StopTTLWorker()
+	ctx := context.Background()
 
-	for _, size := range sizes {
-		b.Run(fmt.Sprintf("Size_%d", size), func(b *testing.B) {
-			store := memory.NewMemoryStore()
-			defer store.StopTTLWorker()
-			ctx := context.Background()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		i := 0
+		for pb.Next() {
+			key := fmt.Sprintf("list_%d", i%100)
+			item := fmt.Sprintf("item_%d", i)
+			store.Push(ctx, key, item)
+			i++
+		}
+	})
+}
 
-			// Pre-populate
-			for i := 0; i < size; i++ {
-				key := fmt.Sprintf("key_%d", i)
-				store.Set(ctx, key, "value", 0)
-			}
+func BenchmarkConcurrentPop(b *testing.B) {
+	store := memory.NewMemoryStore()
+	defer store.StopTTLWorker()
+	ctx := context.Background()
 
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				key := fmt.Sprintf("key_%d", i%size)
-				store.Get(ctx, key)
-			}
-		})
+	for i := 0; i < 100; i++ {
+		key := fmt.Sprintf("list_%d", i)
+		for j := 0; j < 10000; j++ {
+			item := fmt.Sprintf("item_%d_%d", i, j)
+			store.Push(ctx, key, item)
+		}
 	}
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		i := 0
+		for pb.Next() {
+			key := fmt.Sprintf("list_%d", i%100)
+			store.Pop(ctx, key)
+			i++
+		}
+	})
 }
