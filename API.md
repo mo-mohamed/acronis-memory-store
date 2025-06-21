@@ -38,7 +38,7 @@ Content-Type: application/json
 
 ### 1. Set Key-Value Pair
 
-Store a key-value pair with TTL.
+Store a key-value pair with optional TTL.
 
 **Endpoint:** `POST /api/v1/keys`
 
@@ -54,9 +54,9 @@ Store a key-value pair with TTL.
 **Parameters:**
 - `key` (string, required): The key to store
 - `value` (any, required): The value to store (can be string, number, object, etc.)
-- `ttl_seconds` (integer, required): Time to live in seconds (must be greater than 0)
+- `ttl_seconds` (integer, required): Time to live in seconds (0 = no expiration, >0 = expires after seconds)
 
-**Example Request:**
+**Example Request (with TTL):**
 ```bash
 curl -X POST http://localhost:8080/api/v1/keys \
   -H "Content-Type: application/json" \
@@ -64,6 +64,17 @@ curl -X POST http://localhost:8080/api/v1/keys \
     "key": "user:123",
     "value": "my user",
     "ttl_seconds": 3600
+  }'
+```
+
+**Example Request (no expiration):**
+```bash
+curl -X POST http://localhost:8080/api/v1/keys \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "config:app",
+    "value": "permanent config",
+    "ttl_seconds": 0
   }'
 ```
 
@@ -78,7 +89,7 @@ curl -X POST http://localhost:8080/api/v1/keys \
 ```
 
 **Error Responses:**
-- `400 Bad Request`: Invalid JSON, missing required fields, or invalid TTL value
+- `400 Bad Request`: Invalid JSON, missing required fields, or negative TTL value
 - `500 Internal Server Error`: Server error during operation
 
 ---

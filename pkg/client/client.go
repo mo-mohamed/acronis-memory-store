@@ -76,12 +76,16 @@ func NewClient(baseURL string) *Client {
 }
 
 // Set stores a key-value pair with the specified TTL in seconds.
-// The TTL must be greater than 0. The value can be any JSON-serializable type.
+// TTL of 0 means no expiration, TTL > 0 means expires after specified seconds.
+// The value can be any JSON-serializable type.
 //
 // Example:
 //
 //	// Store a string value with 1-hour TTL
 //	err := client.Set(ctx, "user:123", "John Doe", 3600)
+//
+//	// Store a permanent value (no expiration)
+//	err := client.Set(ctx, "config:app", "permanent setting", 0)
 //
 //	// Store a complex object with 30-minute TTL
 //	user := map[string]interface{}{
@@ -90,8 +94,8 @@ func NewClient(baseURL string) *Client {
 //	}
 //	err := client.Set(ctx, "user:profile:123", user, 1800)
 func (c *Client) Set(ctx context.Context, key string, value interface{}, ttlSeconds int) error {
-	if ttlSeconds <= 0 {
-		return fmt.Errorf("TTL is required and must be greater than 0")
+	if ttlSeconds < 0 {
+		return fmt.Errorf("TTL must be >= 0 (0 = no expiration)")
 	}
 
 	req := SetRequest{

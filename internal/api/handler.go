@@ -37,8 +37,8 @@ func (h *Handler) SetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.TTLSeconds <= 0 {
-		h.writeError(w, http.StatusBadRequest, "TTL is required and must be greater than 0")
+	if req.TTLSeconds < 0 {
+		h.writeError(w, http.StatusBadRequest, "TTL must be >= 0 (0 = no expiration)")
 		return
 	}
 

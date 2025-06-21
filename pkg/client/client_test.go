@@ -31,21 +31,18 @@ func TestClient_Set_TTLValidation(t *testing.T) {
 	c := client.NewClient(server.URL)
 	ctx := context.Background()
 
-	// zero TTL
+	// zero TTL should be valid (no expiration)
 	err := c.Set(ctx, "test_key", "test_value", 0)
-	if err == nil {
-		t.Error("Expected error for zero TTL, got nil")
-	}
-	if !strings.Contains(err.Error(), "TTL is required and must be greater than 0") {
-		t.Errorf("Expected TTL validation error, got %v", err)
+	if err != nil {
+		t.Errorf("Expected no error for zero TTL, got %v", err)
 	}
 
-	// negative TTL
+	// negative TTL should fail
 	err = c.Set(ctx, "test_key", "test_value", -5)
 	if err == nil {
 		t.Error("Expected error for negative TTL, got nil")
 	}
-	if !strings.Contains(err.Error(), "TTL is required and must be greater than 0") {
+	if !strings.Contains(err.Error(), "TTL must be >= 0") {
 		t.Errorf("Expected TTL validation error, got %v", err)
 	}
 }

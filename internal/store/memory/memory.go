@@ -24,13 +24,6 @@ type MemoryStore struct {
 	ttlCancel context.CancelFunc
 }
 
-type Value struct {
-	Val    string
-	TTL    time.Time
-	IsList bool
-	List   []string
-}
-
 // NewMemoryStore initializes a new in memory store.
 func NewMemoryStore() *MemoryStore {
 	s := &MemoryStore{
@@ -72,9 +65,9 @@ func (s *MemoryStore) StopTTLWorker() {
 	}
 }
 
-// Set sets a key with a value and ttl
+// Set sets a key with a value and optional ttl (0 = no TTL)
 func (s *MemoryStore) Set(ctx context.Context, key string, value any, ttlSeconds int) error {
-	if ttlSeconds <= 0 {
+	if ttlSeconds < 0 {
 		return ErrInvalidTTL
 	}
 
@@ -86,7 +79,11 @@ func (s *MemoryStore) Set(ctx context.Context, key string, value any, ttlSeconds
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	ttl := time.Now().Add(time.Duration(ttlSeconds) * time.Second)
+	var ttl time.Time
+	if ttlSeconds > 0 {
+		ttl = time.Now().Add(time.Duration(ttlSeconds) * time.Second)
+	}
+	// If ttlSeconds == 0, ttl remains zero (no expiration)
 
 	s.data[key] = Value{Val: stringValue, TTL: ttl, IsList: false}
 	return nil
@@ -95,14 +92,36 @@ func (s *MemoryStore) Set(ctx context.Context, key string, value any, ttlSeconds
 // Get gets a value from the store
 func (s *MemoryStore) Get(ctx context.Context, key string) (string, error) {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
 
 	v, ok := s.data[key]
+	if !ok {
+		s.mu.RUnlock()
+		return "", ErrKeyNotFound
+	}
+
+	// key exists and is not expired or doesn't have a TTL, return the value
+	if v.TTL.IsZero() || time.Now().Before(v.TTL) {
+		if v.IsList {
+			s.mu.RUnlock()
+			return "", ErrTypeMismatch
+		}
+		result := v.Val
+		s.mu.RUnlock()
+		return result, nil
+	}
+
+	// key is expired, lazy delete it
+	s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	v, ok = s.data[key]
 	if !ok {
 		return "", ErrKeyNotFound
 	}
 
 	if !v.TTL.IsZero() && time.Now().After(v.TTL) {
+		delete(s.data, key)
 		return "", ErrKeyNotFound
 	}
 
@@ -128,7 +147,9 @@ func (s *MemoryStore) Update(ctx context.Context, key string, value any) error {
 		return ErrKeyNotFound
 	}
 
+	// If expired, delete it and return key not found
 	if !v.TTL.IsZero() && time.Now().After(v.TTL) {
+		delete(s.data, key)
 		return ErrKeyNotFound
 	}
 
@@ -166,8 +187,12 @@ func (s *MemoryStore) Push(ctx context.Context, key string, item any) error {
 
 	v := s.data[key]
 
-	// If the key doesn't exist, or exist but expired, we create a new list
+	// If the key doesn't exist, or exists but expired, then create a new list
 	if _, exists := s.data[key]; !exists || (!v.TTL.IsZero() && time.Now().After(v.TTL)) {
+		// If key exists but is expired, lazy delete it first
+		if _, exists := s.data[key]; exists && (!v.TTL.IsZero() && time.Now().After(v.TTL)) {
+			delete(s.data, key)
+		}
 		v = Value{IsList: true, List: []string{}}
 	}
 
@@ -175,7 +200,6 @@ func (s *MemoryStore) Push(ctx context.Context, key string, item any) error {
 		return ErrTypeMismatch
 	}
 
-	// Push to front (like LPUSH)
 	v.List = append([]string{stringItem}, v.List...)
 	s.data[key] = v
 	return nil
@@ -191,7 +215,9 @@ func (s *MemoryStore) Pop(ctx context.Context, key string) (string, error) {
 		return "", ErrKeyNotFound
 	}
 
+	// If expired, lazy delete it
 	if !v.TTL.IsZero() && time.Now().After(v.TTL) {
+		delete(s.data, key)
 		return "", ErrKeyNotFound
 	}
 

@@ -204,7 +204,7 @@ func TestHandler_TTLValidation(t *testing.T) {
 	handler := NewHandler(memoryStore)
 	mux := handler.SetupRoutes()
 
-	t.Run("set with zero TTL", func(t *testing.T) {
+	t.Run("set with zero TTL (should succeed)", func(t *testing.T) {
 		setPayload := SetRequest{
 			Key:        "zero_ttl_key",
 			Value:      "test_value",
@@ -218,8 +218,8 @@ func TestHandler_TTLValidation(t *testing.T) {
 
 		mux.ServeHTTP(w, req)
 
-		if w.Code != http.StatusBadRequest {
-			t.Errorf("Expected status 400, got %d", w.Code)
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
 		}
 
 		var response Response
@@ -227,12 +227,8 @@ func TestHandler_TTLValidation(t *testing.T) {
 			t.Fatalf("Failed to decode response: %v", err)
 		}
 
-		if response.Success {
-			t.Error("Expected success=false for zero TTL")
-		}
-
-		if response.Error != "TTL is required and must be greater than 0" {
-			t.Errorf("Expected TTL error message, got %s", response.Error)
+		if !response.Success {
+			t.Error("Expected success=true for zero TTL (no expiration)")
 		}
 	})
 
@@ -263,7 +259,7 @@ func TestHandler_TTLValidation(t *testing.T) {
 			t.Error("Expected success=false for negative TTL")
 		}
 
-		if response.Error != "TTL is required and must be greater than 0" {
+		if response.Error != "TTL must be >= 0 (0 = no expiration)" {
 			t.Errorf("Expected TTL error message, got %s", response.Error)
 		}
 	})

@@ -37,13 +37,27 @@ func TestSet(t *testing.T) {
 		}
 	})
 
-	t.Run("set with zero TTL", func(t *testing.T) {
+	t.Run("set with zero TTL (no expiration)", func(t *testing.T) {
 		err := store.Set(ctx, "key4", "value4", 0)
-		if err == nil {
-			t.Error("Expected error for zero TTL")
+		if err != nil {
+			t.Errorf("Set with zero TTL should be valid: %v", err)
 		}
-		if err != nil && err.Error() != "invalid TTL value" {
-			t.Errorf("Expected 'invalid TTL value', got %v", err)
+
+		value, err := store.Get(ctx, "key4")
+		if err != nil {
+			t.Errorf("Get failed: %v", err)
+		}
+		if value != "value4" {
+			t.Errorf("Expected 'value4', got %q", value)
+		}
+
+		time.Sleep(100 * time.Millisecond)
+		value, err = store.Get(ctx, "key4")
+		if err != nil {
+			t.Errorf("Get after wait failed: %v", err)
+		}
+		if value != "value4" {
+			t.Errorf("Expected 'value4', got %q", value)
 		}
 	})
 
@@ -424,4 +438,66 @@ func TestStringify(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLazyExpiration(t *testing.T) {
+	store := memory.NewMemoryStore()
+	defer store.StopTTLWorker()
+	ctx := context.Background()
+
+	t.Run("Get deletes expired keys", func(t *testing.T) {
+		err := store.Set(ctx, "lazy_expire", "value", 1)
+		if err != nil {
+			t.Errorf("Set failed: %v", err)
+		}
+
+		time.Sleep(1100 * time.Millisecond)
+
+		_, err = store.Get(ctx, "lazy_expire")
+		if err == nil {
+			t.Error("Expected error for expired key")
+		}
+		if err != nil && err.Error() != "key not found" {
+			t.Errorf("Expected 'key not found', got %v", err)
+		}
+
+		_, err = store.Get(ctx, "lazy_expire")
+		if err != nil && err.Error() != "key not found" {
+			t.Errorf("Expected 'key not found' on second access, got %v", err)
+		}
+	})
+
+	t.Run("Update deletes expired keys", func(t *testing.T) {
+		err := store.Set(ctx, "lazy_expire_update", "value", 1)
+		if err != nil {
+			t.Errorf("Set failed: %v", err)
+		}
+
+		time.Sleep(1100 * time.Millisecond)
+
+		err = store.Update(ctx, "lazy_expire_update", "new_value")
+		if err == nil {
+			t.Error("Expected error for expired key")
+		}
+		if err != nil && err.Error() != "key not found" {
+			t.Errorf("Expected 'key not found', got %v", err)
+		}
+	})
+
+	t.Run("Pop deletes expired keys", func(t *testing.T) {
+		err := store.Set(ctx, "lazy_expire_pop", "value", 1)
+		if err != nil {
+			t.Errorf("Set failed: %v", err)
+		}
+
+		time.Sleep(1100 * time.Millisecond)
+
+		_, err = store.Pop(ctx, "lazy_expire_pop")
+		if err == nil {
+			t.Error("Expected error for expired key")
+		}
+		if err != nil && err.Error() != "key not found" {
+			t.Errorf("Expected 'key not found', got %v", err)
+		}
+	})
 }
