@@ -74,7 +74,7 @@ func (s *MemoryStore) StopTTLWorker() {
 
 // Set sets a key with a value and ttl
 func (s *MemoryStore) Set(ctx context.Context, key string, value any, ttlSeconds int) error {
-	if ttlSeconds < 0 {
+	if ttlSeconds <= 0 {
 		return ErrInvalidTTL
 	}
 
@@ -86,10 +86,7 @@ func (s *MemoryStore) Set(ctx context.Context, key string, value any, ttlSeconds
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	var ttl time.Time
-	if ttlSeconds > 0 {
-		ttl = time.Now().Add(time.Duration(ttlSeconds) * time.Second)
-	}
+	ttl := time.Now().Add(time.Duration(ttlSeconds) * time.Second)
 
 	s.data[key] = Value{Val: stringValue, TTL: ttl, IsList: false}
 	return nil

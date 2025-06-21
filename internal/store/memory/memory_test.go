@@ -14,7 +14,7 @@ func TestSet(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("basic set", func(t *testing.T) {
-		err := store.Set(ctx, "key1", "value1", 0)
+		err := store.Set(ctx, "key1", "value1", 60)
 		if err != nil {
 			t.Errorf("Set failed: %v", err)
 		}
@@ -37,8 +37,18 @@ func TestSet(t *testing.T) {
 		}
 	})
 
+	t.Run("set with zero TTL", func(t *testing.T) {
+		err := store.Set(ctx, "key4", "value4", 0)
+		if err == nil {
+			t.Error("Expected error for zero TTL")
+		}
+		if err != nil && err.Error() != "invalid TTL value" {
+			t.Errorf("Expected 'invalid TTL value', got %v", err)
+		}
+	})
+
 	t.Run("set complex type", func(t *testing.T) {
-		err := store.Set(ctx, "key4", map[string]int{"count": 42}, 0)
+		err := store.Set(ctx, "key5", map[string]int{"count": 42}, 60)
 		if err != nil {
 			t.Errorf("Set complex type failed: %v", err)
 		}
@@ -50,8 +60,8 @@ func TestGet(t *testing.T) {
 	defer store.StopTTLWorker()
 	ctx := context.Background()
 
-	store.Set(ctx, "existing", "value", 0)
-	store.Set(ctx, "complex", map[string]int{"num": 42}, 0)
+	store.Set(ctx, "existing", "value", 60)
+	store.Set(ctx, "complex", map[string]int{"num": 42}, 60)
 
 	t.Run("get existing key", func(t *testing.T) {
 		value, err := store.Get(ctx, "existing")
@@ -140,7 +150,7 @@ func TestRemove(t *testing.T) {
 	defer store.StopTTLWorker()
 	ctx := context.Background()
 
-	store.Set(ctx, "to_remove", "value", 0)
+	store.Set(ctx, "to_remove", "value", 60)
 
 	t.Run("remove existing key", func(t *testing.T) {
 		err := store.Remove(ctx, "to_remove")
@@ -195,7 +205,7 @@ func TestPush(t *testing.T) {
 
 	t.Run("push to string key", func(t *testing.T) {
 		key := "string_key"
-		store.Set(ctx, key, "value", 0)
+		store.Set(ctx, key, "value", 60)
 		err := store.Push(ctx, key, "item")
 		if err == nil {
 			t.Error("Expected error when pushing to string key")
@@ -269,8 +279,8 @@ func TestPop(t *testing.T) {
 	})
 
 	t.Run("pop from string key", func(t *testing.T) {
-		key := "string_key"
-		store.Set(ctx, key, "value", 0)
+		key := "string_key_pop"
+		store.Set(ctx, key, "value", 60)
 		_, err := store.Pop(ctx, key)
 		if err == nil {
 			t.Error("Expected error when popping from string key")
@@ -341,7 +351,7 @@ func TestConcurrentOperations(t *testing.T) {
 		// set values
 		go func() {
 			for i := 0; i < 100; i++ {
-				store.Set(ctx, key, "value", 0)
+				store.Set(ctx, key, "value", 60)
 			}
 			done <- true
 		}()

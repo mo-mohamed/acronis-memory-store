@@ -130,8 +130,9 @@ func TestHandler_UpdateAndRemove(t *testing.T) {
 	mux := handler.SetupRoutes()
 
 	setPayload := SetRequest{
-		Key:   "update_key",
-		Value: "initial_value",
+		Key:        "update_key",
+		Value:      "initial_value",
+		TTLSeconds: 60,
 	}
 	payloadBytes, _ := json.Marshal(setPayload)
 
@@ -195,4 +196,75 @@ func TestHandler_ErrorCases(t *testing.T) {
 	if w.Code != http.StatusMethodNotAllowed {
 		t.Errorf("Expected status 405, got %d", w.Code)
 	}
+}
+
+func TestHandler_TTLValidation(t *testing.T) {
+	var memoryStore store.IStore = memory.NewMemoryStore()
+	defer memoryStore.StopTTLWorker()
+	handler := NewHandler(memoryStore)
+	mux := handler.SetupRoutes()
+
+	t.Run("set with zero TTL", func(t *testing.T) {
+		setPayload := SetRequest{
+			Key:        "zero_ttl_key",
+			Value:      "test_value",
+			TTLSeconds: 0,
+		}
+		payloadBytes, _ := json.Marshal(setPayload)
+
+		req := httptest.NewRequest("POST", "/api/v1/keys", bytes.NewReader(payloadBytes))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Expected status 400, got %d", w.Code)
+		}
+
+		var response Response
+		if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+
+		if response.Success {
+			t.Error("Expected success=false for zero TTL")
+		}
+
+		if response.Error != "TTL is required and must be greater than 0" {
+			t.Errorf("Expected TTL error message, got %s", response.Error)
+		}
+	})
+
+	t.Run("set with negative TTL", func(t *testing.T) {
+		setPayload := SetRequest{
+			Key:        "negative_ttl_key",
+			Value:      "test_value",
+			TTLSeconds: -5,
+		}
+		payloadBytes, _ := json.Marshal(setPayload)
+
+		req := httptest.NewRequest("POST", "/api/v1/keys", bytes.NewReader(payloadBytes))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Expected status 400, got %d", w.Code)
+		}
+
+		var response Response
+		if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+			t.Fatalf("Failed to decode response: %v", err)
+		}
+
+		if response.Success {
+			t.Error("Expected success=false for negative TTL")
+		}
+
+		if response.Error != "TTL is required and must be greater than 0" {
+			t.Errorf("Expected TTL error message, got %s", response.Error)
+		}
+	})
 }

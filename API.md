@@ -54,7 +54,7 @@ Store a key-value pair with TTL.
 **Parameters:**
 - `key` (string, required): The key to store
 - `value` (any, required): The value to store (can be string, number, object, etc.)
-- `ttl_seconds` (integer, required): Time to live in seconds
+- `ttl_seconds` (integer, required): Time to live in seconds (must be greater than 0)
 
 **Example Request:**
 ```bash
@@ -78,7 +78,7 @@ curl -X POST http://localhost:8080/api/v1/keys \
 ```
 
 **Error Responses:**
-- `400 Bad Request`: Invalid JSON or missing required fields
+- `400 Bad Request`: Invalid JSON, missing required fields, or invalid TTL value
 - `500 Internal Server Error`: Server error during operation
 
 ---
@@ -296,6 +296,7 @@ curl -X POST http://localhost:8080/api/v1/lists/pop \
 | Error Message | Description | Status Code |
 |---------------|-------------|-------------|
 | "Key is required" | The key parameter is missing or empty | 400 |
+| "TTL is required and must be greater than 0" | The ttl_seconds parameter is missing or invalid | 400 |
 | "Key not found" | The requested key does not exist or has expired | 404 |
 | "Invalid JSON payload" | The request body contains invalid JSON | 400 |
 | "Method not allowed" | The HTTP method is not supported for this endpoint | 405 |

@@ -9,7 +9,7 @@ type Response struct {
 type SetRequest struct {
 	Key        string      `json:"key"`
 	Value      interface{} `json:"value"`
-	TTLSeconds int         `json:"ttl_seconds,omitempty"`
+	TTLSeconds int         `json:"ttl_seconds"`
 }
 
 type UpdateRequest struct {

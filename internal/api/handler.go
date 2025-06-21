@@ -37,6 +37,11 @@ func (h *Handler) SetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.TTLSeconds <= 0 {
+		h.writeError(w, http.StatusBadRequest, "TTL is required and must be greater than 0")
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
