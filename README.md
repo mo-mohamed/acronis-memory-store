@@ -70,4 +70,4 @@ docker compose up
 ## Documentation
 
 - [API Documentation](./API.md) - Detailed API specifications with examples
-- [Benchamring Results](./benchmarks.md) - Testing and building instructions
+- [Benchmark Results](./benchmarks.md) - Testing and building instructions
