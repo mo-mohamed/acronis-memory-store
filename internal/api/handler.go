@@ -250,7 +250,7 @@ func (h *Handler) writeError(w http.ResponseWriter, statusCode int, message stri
 }
 
 // writeSuccess is a helper function to write success responses
-func (h *Handler) writeSuccess(w http.ResponseWriter, data interface{}) {
+func (h *Handler) writeSuccess(w http.ResponseWriter, data any) {
 	h.writeJSON(w, http.StatusOK, Response{
 		Success: true,
 		Data:    data,

@@ -63,7 +63,7 @@ func TestHandler_SetAndGet(t *testing.T) {
 		t.Errorf("Expected success=true, got %v", getResponse.Success)
 	}
 
-	data := getResponse.Data.(map[string]interface{})
+	data := getResponse.Data.(map[string]any)
 	if data["value"] != "test_value" {
 		t.Errorf("Expected value 'test_value', got %v", data["value"])
 	}
@@ -116,7 +116,7 @@ func TestHandler_ListOperations(t *testing.T) {
 		t.Errorf("Expected success=true, got %v", popResponse.Success)
 	}
 
-	data := popResponse.Data.(map[string]interface{})
+	data := popResponse.Data.(map[string]any)
 	if data["value"] != "item1" {
 		t.Errorf("Expected value 'item1', got %v", data["value"])
 	}
