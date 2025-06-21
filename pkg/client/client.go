@@ -88,12 +88,12 @@ func NewClient(baseURL string) *Client {
 //	err := client.Set(ctx, "config:app", "permanent setting", 0)
 //
 //	// Store a complex object with 30-minute TTL
-//	user := map[string]interface{}{
+//	user := map[string]any{
 //	    "name": "John Doe",
 //	    "age":  30,
 //	}
 //	err := client.Set(ctx, "user:profile:123", user, 1800)
-func (c *Client) Set(ctx context.Context, key string, value interface{}, ttlSeconds int) error {
+func (c *Client) Set(ctx context.Context, key string, value any, ttlSeconds int) error {
 	if ttlSeconds < 0 {
 		return fmt.Errorf("TTL must be >= 0 (0 = no expiration)")
 	}
@@ -129,7 +129,7 @@ func (c *Client) Get(ctx context.Context, key string) (string, error) {
 	}
 
 	// Parse the response data
-	data, ok := resp.Data.(map[string]interface{})
+	data, ok := resp.Data.(map[string]any)
 	if !ok {
 		return "", fmt.Errorf("unexpected response format")
 	}
@@ -156,7 +156,7 @@ func (c *Client) Get(ctx context.Context, key string) (string, error) {
 //	        log.Fatal(err)
 //	    }
 //	}
-func (c *Client) Update(ctx context.Context, key string, value interface{}) error {
+func (c *Client) Update(ctx context.Context, key string, value any) error {
 	req := UpdateRequest{
 		Value: value,
 	}
@@ -191,13 +191,13 @@ func (c *Client) Remove(ctx context.Context, key string) error {
 //	err = client.Push(ctx, "queue:tasks", "send-email-456")
 //
 //	// Add complex objects
-//	task := map[string]interface{}{
+//	task := map[string]any{
 //	    "id":   "task-789",
 //	    "type": "backup",
 //	    "priority": 1,
 //	}
 //	err = client.Push(ctx, "queue:priority", task)
-func (c *Client) Push(ctx context.Context, key string, item interface{}) error {
+func (c *Client) Push(ctx context.Context, key string, item any) error {
 	req := PushRequest{
 		Key:  key,
 		Item: item,
@@ -237,7 +237,7 @@ func (c *Client) Pop(ctx context.Context, key string) (string, error) {
 	}
 
 	// Parse the response data
-	data, ok := resp.Data.(map[string]interface{})
+	data, ok := resp.Data.(map[string]any)
 	if !ok {
 		return "", fmt.Errorf("unexpected response format")
 	}
@@ -252,7 +252,7 @@ func (c *Client) Pop(ctx context.Context, key string) (string, error) {
 
 // doRequest performs an HTTP request and handles the response.
 // This is an internal method used by all public client methods.
-func (c *Client) doRequest(ctx context.Context, method, endpoint string, body interface{}) (*Response, error) {
+func (c *Client) doRequest(ctx context.Context, method, endpoint string, body any) (*Response, error) {
 	url := c.baseURL + endpoint
 
 	var reqBody io.Reader
