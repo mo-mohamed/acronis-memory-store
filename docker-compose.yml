@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  acronis-memory-store:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: acronis-memory-store
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+    restart: unless-stopped
+    networks:
+      - acronis-network
+
+networks:
+  acronis-network:
+    driver: bridge 
